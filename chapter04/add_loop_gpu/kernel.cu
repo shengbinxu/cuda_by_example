@@ -9,7 +9,8 @@
 #define N 10
 
 __global__ void add(int* a, int* b, int* c) {
-    int tid = blockIdx.x;  // µ±Ç°Ö´ÐÐ×ÅÉè±¸´úÂëµÄÏß³Ì¿é(Block)µÄË÷Òý,µÚÒ»¸öÏß³Ì¿éµÄË÷ÒýÎª0
+    int tid = blockIdx.x;
+    printf("tid: %d\n", tid);
     if (tid < N) {
         c[tid] = a[tid] + b[tid];
     }
@@ -32,10 +33,10 @@ int main() {
     HANDLE_ERROR(cudaMemcpy(dev_a, a, N * sizeof(int), cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMemcpy(dev_b, b, N * sizeof(int), cudaMemcpyHostToDevice));
 
-    // <<<b, t>>> b:Éè±¸ÔÚÖ´ÐÐºËº¯ÊýÊ±Ê¹ÓÃµÄ²¢ÐÐÏß³Ì¿é(Block)ÊýÁ¿¡£t:CUDA RuntimeÔÚÃ¿¸öÏß³Ì¿éÖÐ´´½¨µÄÏß³ÌÊýÁ¿
-    // N¸öÏß³Ì¿é * 1¸öÏß³Ì/Ïß³Ì¿é = N¸ö²¢ÐÐÏß³Ì
-    // µ±Æô¶¯ºËº¯ÊýÊ±£¬ÎÒÃÇ½«²¢ÐÐÏß³Ì¿é(Block)µÄÊýÁ¿Ö¸¶¨ÎªN¡£Õâ¸ö²¢ÐÐÏß³Ì¿é¼¯ºÏÒ²³ÆÎªÒ»¸öÏß³Ì¸ñ(Grid),
-    // ÕâÊÇ¸æËßCUDA Runtime£¬ÎÒÃÇÏëÒªÒ»¸öÒ»Î¬µÄÏß³Ì¸ñ£¬ÆäÖÐ°üº¬N¸öÏß³Ì¿é¡£
+    // <<<b, t>>> b:ï¿½è±¸ï¿½ï¿½Ö´ï¿½ÐºËºï¿½ï¿½ï¿½Ê±Ê¹ï¿½ÃµÄ²ï¿½ï¿½ï¿½ï¿½ß³Ì¿ï¿½(Block)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½t:CUDA Runtimeï¿½ï¿½Ã¿ï¿½ï¿½ï¿½ß³Ì¿ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½ï¿½ï¿½ï¿½ï¿½
+    // Nï¿½ï¿½ï¿½ß³Ì¿ï¿½ * 1ï¿½ï¿½ï¿½ß³ï¿½/ï¿½ß³Ì¿ï¿½ = Nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³ï¿½
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëºï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Ç½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¿ï¿½(Block)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ÎªNï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß³Ì¿é¼¯ï¿½ï¿½Ò²ï¿½ï¿½ÎªÒ»ï¿½ï¿½ï¿½ß³Ì¸ï¿½(Grid),
+    // ï¿½ï¿½ï¿½Ç¸ï¿½ï¿½ï¿½CUDA Runtimeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÒªÒ»ï¿½ï¿½Ò»Î¬ï¿½ï¿½ï¿½ß³Ì¸ï¿½ï¿½ï¿½ï¿½Ð°ï¿½ï¿½ï¿½Nï¿½ï¿½ï¿½ß³Ì¿é¡£
     add<<<N, 1 >>>(dev_a, dev_b, dev_c);
 
     HANDLE_ERROR(cudaMemcpy(c, dev_c, sizeof(int) * N, cudaMemcpyDeviceToHost));
