@@ -10,10 +10,15 @@
 
 __global__ void add(int* a, int* b, int* c) {
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    printf("tid: %d, blockIdx.x: %d, blockDim.x: %d, threadIdx.x: %d, gridDim: %d\n", tid, blockIdx.x, blockDim.x, threadIdx.x, gridDim.x);
     while (tid < N) {
         c[tid] = a[tid] + b[tid];
-        tid +=  gridDim.x * blockDim.x;  // ²½³¤£ºÆô¶¯µÄThreadµÄÊýÁ¿ = Æô¶¯µÄBlockÊýÁ¿(gridDim.x) * Ã¿¸öBlock°üº¬µÄThreadµÄÊýÁ¿(blockDim.x)
-                                         // ÈÃÃ¿¸öThread´¦Àí N / (gridDim.x * blockDim.x)¸öÊý¾Ý
+        // gridDimï¼šä»£è¡¨ Grid çš„å°ºå¯¸ã€‚ä¹Ÿå°±æ˜¯â€œè¿™ä¸€æ‰¹ä»»åŠ¡æ€»å…±æœ‰å¤šå°‘ä¸ª Blockâ€ã€‚
+        // blockDimï¼šä»£è¡¨ Block çš„å°ºå¯¸ã€‚ä¹Ÿå°±æ˜¯â€œæ¯ä¸ª Block æ€»å…±æœ‰å¤šå°‘ä¸ª Threadâ€ã€‚
+        /**
+         */
+        tid +=  gridDim.x * blockDim.x;  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Threadï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ = ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Blockï¿½ï¿½ï¿½ï¿½(gridDim.x) * Ã¿ï¿½ï¿½Blockï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Threadï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(blockDim.x)
+                                         // ï¿½ï¿½Ã¿ï¿½ï¿½Threadï¿½ï¿½ï¿½ï¿½ N / (gridDim.x * blockDim.x)ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     }
 }
 
@@ -37,8 +42,8 @@ int main() {
     HANDLE_ERROR(cudaMemcpy(dev_a, a, N * sizeof(int), cudaMemcpyHostToDevice));
     HANDLE_ERROR(cudaMemcpy(dev_b, b, N * sizeof(int), cudaMemcpyHostToDevice));
 
-    // Æô¶¯128¸öBlock£¬Ã¿¸öBlockº¬ÓÐ128¸öÏß³Ì
-    // ÈÃÃ¿¸öThread´¦Àí N / 16384¸öÊý¾Ý
+    // ï¿½ï¿½ï¿½ï¿½128ï¿½ï¿½Blockï¿½ï¿½Ã¿ï¿½ï¿½Blockï¿½ï¿½ï¿½ï¿½128ï¿½ï¿½ï¿½ß³ï¿½
+    // ï¿½ï¿½Ã¿ï¿½ï¿½Threadï¿½ï¿½ï¿½ï¿½ N / 16384ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     add<<<128, 128>>>(dev_a, dev_b, dev_c);
 
     HANDLE_ERROR(cudaMemcpy(c, dev_c, sizeof(int) * N, cudaMemcpyDeviceToHost));

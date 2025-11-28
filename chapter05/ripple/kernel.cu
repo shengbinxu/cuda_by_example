@@ -4,19 +4,18 @@
 
 #include <stdio.h>
 #include "../../common/book.h"
-#include "../../common/cpu_anim.h"
 
 #define DIM 1024
 #define PI 3.1415926535897932f
 
 __global__ void kernel(unsigned char* ptr, int ticks) {
-    // 将threadIdx/blockIdx映射到像素位置
+    // 鏄犲皠鍧愭爣
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     int y = blockIdx.y * blockDim.y + threadIdx.y;
 
     int offset = y * blockDim.x * gridDim.x + x;
 
-    // 下面的代码与动画有关，不用管了
+    // 璁＄畻娉㈢汗
     float fx = x - DIM / 2;
     float fy = y - DIM / 2;
     float d = sqrtf(fx * fx + fy * fy);
@@ -27,44 +26,64 @@ __global__ void kernel(unsigned char* ptr, int ticks) {
     ptr[offset * 4 + 1] = grey;
     ptr[offset * 4 + 2] = grey;
     ptr[offset * 4 + 3] = 255;
-
 }
 
-struct DataBlock
-{
-    unsigned char* dev_bitmap;
-    CPUAnimBitmap* bitmap;
-};
-
-void generate_frame(DataBlock* d, int ticks) {
-    // (DIM/16, DIM/16)个Block组成一个Grid
-    // 每个Block中有(16, 16)个Thread
-    // 所以一共有(DIM, DIM)个Thread，对应DIM*DIM尺寸的图像，每一个像素由一个Thread处理
-    dim3 blocks(DIM / 16, DIM / 16);
-    dim3 threads(16, 16);
-    kernel<<<blocks, threads>>>(d->dev_bitmap, ticks);
-
-    HANDLE_ERROR(cudaMemcpy(d->bitmap->get_ptr(),
-                            d->dev_bitmap,
-                            d->bitmap->image_size(),
-                            cudaMemcpyDeviceToHost));
-}
-
-// 释放在GPU上分配的显存
-void cleanup(DataBlock* d) {
-    HANDLE_ERROR(cudaFree(d->dev_bitmap));
+void save_to_ppm(unsigned char *ptr, int w, int h, int frame_idx) {
+    char filename[64];
+    sprintf(filename, "frame_%03d.ppm", frame_idx);
+    
+    FILE *fp = fopen(filename, "wb");
+    // PPM header: P6 <width> <height> <maxval>
+    fprintf(fp, "P6\n%d %d\n255\n", w, h);
+    for (int y=0; y<h; y++) {
+        for (int x=0; x<w; x++) {
+            int offset = (x + y * w) * 4; // RGBA from CUDA
+            // Write RGB, skip A
+            fwrite(ptr + offset, 1, 3, fp);
+        }
+    }
+    fclose(fp);
 }
 
 int main() {
-    DataBlock data;
-    CPUAnimBitmap bitmap(DIM, DIM, &data);
-    data.bitmap = &bitmap;
+    int width = DIM;
+    int height = DIM;
+    size_t image_size = width * height * 4;
 
-    HANDLE_ERROR(cudaMalloc((void**)&data.dev_bitmap, bitmap.image_size()));
+    // 1. Allocate Host Memory
+    unsigned char *host_bitmap = (unsigned char*)malloc(image_size);
 
-    // 每次生成一帧图像，调用一次generate_frame，之后将分配的显存释放掉
-    bitmap.anim_and_exit((void(*)(void*, int))generate_frame,
-                         (void(*)(void*))cleanup);
+    // 2. Allocate Device Memory
+    unsigned char *dev_bitmap;
+    HANDLE_ERROR(cudaMalloc((void**)&dev_bitmap, image_size));
+
+    dim3 blocks(DIM / 16, DIM / 16);
+    dim3 threads(16, 16);
+
+    // 3. Loop to generate frames
+    int num_frames = 100;
+    printf("Generating %d frames...\n", num_frames);
+    
+    for(int ticks = 0; ticks < num_frames; ticks++) {
+        // Kernel
+        kernel<<<blocks, threads>>>(dev_bitmap, ticks);
+        HANDLE_ERROR(cudaGetLastError());
+        cudaDeviceSynchronize();
+
+        // Copy back
+        HANDLE_ERROR(cudaMemcpy(host_bitmap, dev_bitmap, image_size, cudaMemcpyDeviceToHost));
+
+        // Save
+        save_to_ppm(host_bitmap, width, height, ticks);
+        
+        if(ticks % 10 == 0) printf("."); 
+        fflush(stdout);
+    }
+    printf("\nDone generating frames.\n");
+
+    // 4. Cleanup
+    HANDLE_ERROR(cudaFree(dev_bitmap));
+    free(host_bitmap);
 
     return 0;
 }
